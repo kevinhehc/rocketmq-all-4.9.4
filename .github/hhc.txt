@@ -1,0 +1,187 @@
+RebalanceLitePullImpl#computePullFromWhereWithException
+
+DefaultMQProducerImpl#sendDefaultImpl
+
+suspendTimeoutMillis
+
+suggestWhichBrokerId
+
+org.apache.rocketmq.store.DefaultMessageStore#getMessage
+里面的
+getResult.setSuggestPullingFromSlave(diff > memory);
+
+
+ConsumeMessageConcurrentlyService#processConsumeResult
+for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++)
+这里跑不进去的，因为i=ackIndex + 1
+
+
+顺序消息的本地锁
+messageQueueLock.fetchLockObject
+
+
+顺序消息的分布式的锁
+RebalanceLockManager
+
+TransactionalMessageServiceImpl
+事务消息的核心处理的类
+
+RMQ_SYS_TRANS_HALF_TOPIC
+事务消息的topic名字
+
+HAService
+主从数据同步
+CommitLog#submitReplicaRequest
+根据BrokerRole.SYNC_MASTER进行主从同步的方式选择【同步】还是【异步】
+HAConnection
+真正数据传输的地方
+
+如何在指定的broker上创建topic
+MQAdminImpl#createTopic 在每个broker上面创建相同数量的读写queue，而不是总的创建4，4
+
+
+TopicConfigManager#createTopicInSendMessageMethod
+broker创建topic的地方
+https://toutiao.io/posts/5gaq47/preview
+如果是自动创建，从nameServer拿到topic的broker信息，然后再从发消息到broker，同时【final String topic, final String defaultTopic 】，defaultTopic就是 AUTO_CREATE_TOPIC_KEY_TOPIC
+然后broker持久化消息之后，同时会创建topic数据，同时也注册到nameServer
+
+BrokerPathConfigHelper  文件路径相关的类
+
+
+5.rebalance的时候，并发消费会出现重复消费 ，顺序消费做了锁
+3.broker的slave端不可以搞事务消息
+18.messageId的生成时机
+8.nameServer之间是否需要通信 ---不需要
+20.队列分配在哪些broker上，是如何分配的---自动创建的话，那就是从那个broker上面创建，收到的话，那就是所有的broker都一样
+22.主从同步的数据传输是推还是拉的，如果保证一致性---推的，slave发送上次同步的进度，master把进度之后的数据一次性下发
+4.ProcessQueue是不是可以无限增长---不是，好像有长度限制的
+3.PullAPIWrapper是干什么用---用于包装下次拉取的broker，有可能是slave
+
+
+PullMessageService 一个专门的消息拉取线程
+
+nameServer的功能
+broker的注册发现
+topic的注册发现，同时还有topic的ClassFilter的信息
+
+
+MQClientAPIImpl发起接口远程调用的地方【例如消息的发送，消息的拉取】
+
+10.创建topic的时候，是谁分配的队列，分配的方式是，如果某个broker在分配完之后挂了会怎么样。
+13.消费进度broker不做校验，client提交的进度是多少就多少，如果是比之前的低，会打印一下warn日志。
+29.MQAdminImpl偏管理相关的功能，类型创建topic，查看信息
+30.发送消息，同步的情况下才会重试，异步不会
+
+PullMessageService拉取消息的核心处理
+RebalanceService负载均衡的核心处理
+
+
+
+真正消费的地方
+ConsumeMessageConcurrentlyService.ConsumeRequest
+ConsumeMessageOrderlyService.ConsumeRequest
+
+如果失败了就提交重试
+ConsumeMessageConcurrentlyService#processConsumeResult
+ConsumeMessageOrderlyService#processConsumeResult
+
+
+MQClientInstance#rebalanceImmediately
+这里会立刻重平衡，重平衡会立刻提交消息的拉取
+push----RebalancePushImpl#dispatchPullRequest
+pull----
+this.rebalanceService.start();
+org.apache.rocketmq.client.impl.consumer.RebalanceService#run
+	org.apache.rocketmq.client.impl.factory.MQClientInstance#doRebalance
+		org.apache.rocketmq.client.impl.consumer.DefaultLitePullConsumerImpl#doRebalance
+			org.apache.rocketmq.client.impl.consumer.RebalanceImpl#doRebalance
+				org.apache.rocketmq.client.impl.consumer.RebalanceImpl#rebalanceByTopic
+
+
+DefaultMQPushConsumerImpl#pullMessage
+拉取消息，并在之前进行限流等处理
+
+
+DefaultLitePullConsumerImpl.PullTaskImpl#run
+拉取消息，并在之前进行限流等处理
+consumeRequestCache 这里还多了一份缓存，成功的处理
+processQueue.putMessage(pullResult.getMsgFoundList());
+submitConsumeRequest(new ConsumeRequest(pullResult.getMsgFoundList(), messageQueue, processQueue));
+
+
+ConsumeMessageConcurrentlyService
+并发处理线程数数20
+
+批量消费数据
+默认是1
+private int consumeMessageBatchMaxSize = 1;
+consumer.setConsumeMessageBatchMaxSize(10);
+
+消息拉取，一次最大拉取32
+private int pullBatchSize = 32;
+consumer.setPullBatchSize(10);
+
+
+ ConsumeMessageConcurrentlyService#submitConsumeRequest
+ 消息进度分批的逻辑
+
+7. SubscriptionType pull场景下有assign和subscribe两种模式
+4.拉消息都是只是一个线程拉的---是的
+16.要不要批量发送才能批量消费---不用，没有任何关联
+27.消息消费失败，会如何处理
+
+顺序消费的进度是每次都提交 offset
+并发消费是定时提交 offset
+
+//异步刷盘且未开启TransientStorePool的处理逻辑
+org.apache.rocketmq.store.CommitLog.FlushRealTimeService
+
+//异步刷盘且开启TransientStorePool的处理逻辑
+org.apache.rocketmq.store.CommitLog.CommitRealTimeService
+
+dleger是rocketmq在后期版本中引入的一个组件，可以用来主从切换等，默认值是false
+
+17.如果消费的时候没批量，是尽快的消费逻辑还是等到批量---有消息就消费，不等
+21.顺序消息在创建queue的时候是否需要额外配置---队列应该是没有顺序不顺序的概念的，只是消费的时候才有
+6.并发消费，然后消费失败，发送回去broker又失败了，这个时候再消费，offset的更新要额外处理了------this.queueOffsetMax核心的地方是这里
+
+6.加入消费者A拉取了队列１的数据2000条，消费的时候，突然加入了消费者，B拉取了队列１的数据，A的消费很慢，然后交替性的提交offset【B一直沒收到消费者数量的变化，要20s才会rebalance】
+7.事务消息的处理逻辑 【如果发送半消息成功了，会立刻回查一下消息】【 回查线程每一分钟执行一次，处理超过6秒未回查消息，超过15次则丢弃消息，
+broker端会在一段时间内查15次，如果超过一段时间或者大于15次就丢弃消息】TransactionalMessageServiceImpl#check
+https://blog.csdn.net/qq_35529969/article/details/122887702
+------------------------------------------------------------------------------------------------------???
+
+
+remotingServer和fastRemotingServer有什么区别
+
+
+1.PullMessageService只有一个拉取消息的线程，会不会不够用，多个topic的时候
+2.顺序消息的拉取，会多拉取多少个消息呢
+3.拉取消息的时候，是消费者端带上了拉取的开始位置，还是broker根据上次最新commit的offset往后拉取
+4.顺序消费的时候，一次是拉取多少数据，如果消费失败了，如何处理
+1.哪个版本开始有限流的策略？
+2.没限流之前，会不会oom啥的？
+3.消费进度commit不是每次都同步到broker的，定时的？
+6.rebalance的时候，broker或者client会做什么处理？
+9.admin那个页面每次是跟broker还是跟nameServer通信?
+
+11.死信队列的信息是如何处理的？
+12.test的样例值得看看
+
+14.顺序消息每次拉多少条数据的？ 10还是20
+15.write,commit,flush分别是什么概念？
+
+
+
+
+24.消费的时候，订阅信息要不要提前创建？
+25.VIPChannel是什么: 因为之前的通道太多数据，有些重要的数据可用额外开一个通路
+1.broker里面的pageCache
+1.trace的玩法
+5.很多东西加个Inner，是什么概念？
+6.nameServer是随机选择一个，如果失败了，那就重试，如果再失败，index+1再尝试下一个，直到遍历完所有的
+7.broker上的队列是否绑定消费者
+8.一条消息会不会有多个消息id,类似消费失败了发回去到队列里面
+9.如果两个消费者消费同一个主题，用不同的队列选择器导致选中了同一个队列，会不会导致两个消费者同时在消费同一个队列，如果发送了这种情况，有什么样的结果
+

@@ -1,0 +1,4 @@
+RequestFutureHolder
+DefaultMQProducerImpl
+ConsumerManager
+MessageClientIDSetter 消息id生成器
