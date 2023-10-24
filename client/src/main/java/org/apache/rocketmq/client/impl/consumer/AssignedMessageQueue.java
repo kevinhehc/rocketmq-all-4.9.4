@@ -101,6 +101,7 @@ public class AssignedMessageQueue {
         return -1;
     }
 
+    // MessageQueueState 更新消费进度
     public void updateConsumeOffset(MessageQueue messageQueue, long offset) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {

@@ -980,6 +980,8 @@ public class DefaultLitePullConsumerImpl implements MQConsumerInner {
 
     }
 
+
+    // offsetStore 更新消费进度
     public void updateConsumeOffset(MessageQueue mq, long offset) {
         checkServiceState();
         this.offsetStore.updateOffset(mq, offset, false);
