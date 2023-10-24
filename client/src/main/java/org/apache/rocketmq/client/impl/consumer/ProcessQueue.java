@@ -215,6 +215,7 @@ public class ProcessQueue {
                     msgCount.addAndGet(removedCnt);
 
                     if (!msgTreeMap.isEmpty()) {
+                        // 返回未消费的数据的最小的offset
                         result = msgTreeMap.firstKey();
                     }
                 }
